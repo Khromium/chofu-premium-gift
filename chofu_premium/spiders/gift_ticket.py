@@ -8,6 +8,7 @@ class GiftTicketSpider(scrapy.Spider):
     start_urls = ['https://premium-gift.jp/chofu/use_store?events=page&id=1']
 
     def parse(self, response: HtmlResponse, **kwargs):
+        current_page = int(response.xpath("//span[@class='pagenation__item is-current']/text()").get())
         table = response.xpath("//div[@class='store-card__item']")
         for item in table:
             store_title = item.xpath(".//h3[@class='store-card__title']/text()")
@@ -17,9 +18,12 @@ class GiftTicketSpider(scrapy.Spider):
             store_tel = store_table[1].xpath("string(.)")
             store_url = store_table[2].xpath(".//a/@href")
 
-
             print(f"店名：{store_title.get()}\n"
                   f"タグ：{store_tag.get()}\n"
                   f"住所：{store_address.get()}\n"
                   f"電話：{store_tel.get()}\n"
                   f"URL：{store_url.get()}\n")
+        pagenation = response.xpath("//a[@class='pagenation__item']")
+        has_next_page = pagenation[len(pagenation) - 1].xpath("string(.)").get() == "次へ"
+        if has_next_page:
+            yield scrapy.Request(url="https://premium-gift.jp/chofu/use_store?events=page&id=" + str(current_page + 1))
