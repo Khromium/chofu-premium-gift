@@ -1,5 +1,8 @@
+import unicodedata
+
 import scrapy
 from scrapy.http import HtmlResponse
+from typing import List
 
 
 class GiftTicketSpider(scrapy.Spider):
@@ -9,21 +12,58 @@ class GiftTicketSpider(scrapy.Spider):
 
     def parse(self, response: HtmlResponse, **kwargs):
         current_page = int(response.xpath("//span[@class='pagenation__item is-current']/text()").get())
-        table = response.xpath("//div[@class='store-card__item']")
-        for item in table:
-            store_title = item.xpath(".//h3[@class='store-card__title']/text()")
-            store_tag = item.xpath(".//p[@class='store-card__tag']/text()")
-            store_table = item.xpath(".//table[@class='store-card__table']/tbody/tr/td")
-            store_address = store_table[0].xpath("string(.)")
-            store_tel = store_table[1].xpath("string(.)")
-            store_url = store_table[2].xpath(".//a/@href")
+        # 店舗情報の取得
+        stores = CrawlStore(response).crawl_stores()
+        for item in stores:
+            yield Store(
+                    **item,
+                    is_large_store=str("大型店" in item["title"])
+            )
 
-            print(f"店名：{store_title.get()}\n"
-                  f"タグ：{store_tag.get()}\n"
-                  f"住所：{store_address.get()}\n"
-                  f"電話：{store_tel.get()}\n"
-                  f"URL：{store_url.get()}\n")
+        # 次のページがあるか確認
         pagenation = response.xpath("//a[@class='pagenation__item']")
         has_next_page = pagenation[len(pagenation) - 1].xpath("string(.)").get() == "次へ"
         if has_next_page:
             yield scrapy.Request(url="https://premium-gift.jp/chofu/use_store?events=page&id=" + str(current_page + 1))
+
+
+class CrawlStore:
+    def __init__(self, response: HtmlResponse):
+        self.response = response
+
+    def crawl_stores(self) -> List[dict]:
+        table = self.response.xpath("//div[@class='store-card__item']")
+        stores = []
+        for item in table:
+            store_table = item.xpath(".//table[@class='store-card__table']/tbody/tr/td")
+
+            store_data = {
+                "title": item.xpath(".//h3[@class='store-card__title']/text()").get(),
+                "tag": item.xpath(".//p[@class='store-card__tag']/text()").get(),
+                "address": store_table[0].xpath("string(.)").get(),
+                "tel": store_table[1].xpath("string(.)").get(),
+                "url": store_table[2].xpath(".//a/@href").get()
+            }
+            # 整形
+            for k, v in store_data.items():
+                if not v:
+                    store_data[k] = ""
+                    continue
+                store_data[k] = unicodedata.normalize("NFKC", v.strip())
+
+            stores.append(store_data)
+        return stores
+
+
+class Store(scrapy.Item):
+    """
+    データ保存用
+    """
+
+    # cf. settings.py 内の FEED_EXPORT_FIELDS
+    title = scrapy.Field()
+    tag = scrapy.Field()
+    address = scrapy.Field()
+    tel = scrapy.Field()
+    url = scrapy.Field()
+    is_large_store = scrapy.Field()
