@@ -8,7 +8,8 @@ from typing import List
 class GiftTicketSpider(scrapy.Spider):
     name = 'gift_ticket'
     allowed_domains = ['premium-gift.jp']
-    start_urls = ['https://premium-gift.jp/chofu/use_store?events=page&id=1']
+    base_url = 'https://premium-gift.jp/chofu2021/use_store?events=page&id='
+    start_urls = [base_url + '1']
 
     def parse(self, response: HtmlResponse, **kwargs):
         current_page = int(response.xpath("//span[@class='pagenation__item is-current']/text()").get())
@@ -24,7 +25,7 @@ class GiftTicketSpider(scrapy.Spider):
         pagenation = response.xpath("//a[@class='pagenation__item']")
         has_next_page = pagenation[len(pagenation) - 1].xpath("string(.)").get() == "次へ"
         if has_next_page:
-            yield scrapy.Request(url="https://premium-gift.jp/chofu/use_store?events=page&id=" + str(current_page + 1))
+            yield scrapy.Request(url=self.base_url + str(current_page + 1))
 
 
 class CrawlStore:

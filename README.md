@@ -1,6 +1,6 @@
 # chofu-premium-gift
 ## これは何？
-[調布のプレミアム付商品券のページ](https://premium-gift.jp/chofu/use_store) のデータを  
+[調布のプレミアム付商品券のページ](https://premium-gift.jp/chofu2021/use_store) のデータを  
 スクレイピングするためのPythonスクリプトです。  
 
 公式サイトでちんたら検索するよりも、一覧で手に入れてMyMapに落とし込んだほうが便利だと思ったので作りました。  
